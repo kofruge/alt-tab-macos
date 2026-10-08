@@ -17,10 +17,10 @@ class Appearance {
     static var windowMaxWidthInRow = CGFloat(1000)
 
     // size: constants
-    static let maxHeightOnScreen = CGFloat(0.8)
+    static let maxHeightOnScreen = CGFloat(0.96)
     static let interCellPadding = CGFloat(1)
     static let intraCellPadding = CGFloat(5)
-    static let appIconLabelSpacing = CGFloat(2)
+    static let appIconLabelSpacing = CGFloat(4)
 
     // theme
     static var fontColor = NSColor.red
@@ -159,23 +159,23 @@ class Appearance {
 
     private static func titlesSize(_ size: AppearanceSizePreference) {
         hideThumbnails = true
-        windowPadding = 18
-        windowCornerRadius = 23
-        cellCornerRadius = 10
-        edgeInsetsSize = 7
-        windowMinWidthInRow = 0.6
-        windowMaxWidthInRow = 0.9
+        windowPadding = 8
+        windowCornerRadius = 10
+        cellCornerRadius = 4
+        edgeInsetsSize = 3
+        windowMinWidthInRow = 0.5
+        windowMaxWidthInRow = 0.95
         rowsCount = 1
         switch size {
             case .small:
+                iconSize = 16
+                fontHeight = 12
+            case .medium:
                 iconSize = 18
                 fontHeight = 13
-            case .medium:
-                iconSize = 24
-                fontHeight = 14
             case .large, .auto:
-                iconSize = 30
-                fontHeight = 16
+                iconSize = 20
+                fontHeight = 13.5
         }
     }
 
