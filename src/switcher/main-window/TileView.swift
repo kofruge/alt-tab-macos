@@ -334,7 +334,9 @@ class TileView: FlippedView {
             setAccessibilityLabel(title)
         }
         fullTitle = title
-        fullTitleWidth = label.cell!.cellSize.width
+        let cellWidth = label.cell!.cellSize.width
+        let stringWidth = (title as NSString).size(withAttributes: [.font: Appearance.font]).width.rounded(.up)
+        fullTitleWidth = max(cellWidth, stringWidth)
         label.updateTruncationModeIfNeeded()
         if statusIcons.spaceVisible {
             let spaceIndex = element.spaceIndexes.first
@@ -557,10 +559,11 @@ class TileView: FlippedView {
     }
 
     var contentWidthForTitlesStyle: CGFloat {
-        Appearance.edgeInsetsSize * 2
+        let measuredTitleWidth = fullTitleWidth > 0 ? fullTitleWidth : (fullTitle as NSString).size(withAttributes: [.font: Appearance.font]).width.rounded(.up)
+        return Appearance.edgeInsetsSize * 2
             + appIcon.frame.width
             + Appearance.appIconLabelSpacing
-            + fullTitleWidth
+            + measuredTitleWidth
             + statusIcons.totalWidth
             + 8
     }

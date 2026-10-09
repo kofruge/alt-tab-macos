@@ -15,9 +15,7 @@ class KeyRepeatTimer {
     static var currentRepeatRate: TimeInterval = 0
 
     static func startRepeatingKeyPreviousWindow() {
-        if let shortcut = ControlsTab.shortcuts["previousWindowShortcut"],
-           // events already repeat when using a shortcut with a keycode; no need for artificial repeat
-           shortcut.shortcut.keyCode == .none {
+        if let shortcut = ControlsTab.shortcuts["previousWindowShortcut"] {
             startTimerForRepeatingKey(shortcut) {
                 App.previousWindowShortcutWithRepeatingKey()
             }
@@ -54,8 +52,26 @@ class KeyRepeatTimer {
         // return nil on its first read, so every launch's first hold-cycle ran at these instead.
         // Read per arm, but served from the cache after the first time, so a change made in System Settings
         // mid-session isn't picked up until relaunch.
-        let repeatRate = ticksToSeconds(CachedUserDefaults.globalString("KeyRepeat") ?? "6")
-        let initialDelay = ticksToSeconds(CachedUserDefaults.globalString("InitialKeyRepeat") ?? "25")
+        let repeatRate: TimeInterval = {
+            let custom = UserDefaults.standard.double(forKey: "keyRepeatInterval")
+            if custom > 0 {
+                return custom
+            }
+            if let str = CachedUserDefaults.globalString("KeyRepeat") {
+                return ticksToSeconds(str)
+            }
+            return 0.065
+        }()
+        let initialDelay: TimeInterval = {
+            let custom = UserDefaults.standard.double(forKey: "keyRepeatInitialDelay")
+            if custom > 0 {
+                return custom
+            }
+            if let str = CachedUserDefaults.globalString("InitialKeyRepeat") {
+                return ticksToSeconds(str)
+            }
+            return 0.25
+        }()
         armedAt = ProcessInfo.processInfo.systemUptime
         currentInitialDelay = initialDelay
         currentRepeatRate = repeatRate

@@ -621,19 +621,23 @@ class TilesView {
         guard !filled.aborted else { return nil }
         let tiles = filled.tiles
 
-        if Preferences.effectiveAppearanceStyle(SwitcherSession.activeShortcutIndex) == .titles && !tiles.isEmpty {
+        let isTitles = Preferences.effectiveAppearanceStyle(SwitcherSession.activeShortcutIndex) == .titles
+        var optimalTitlesWidth: CGFloat? = nil
+        if isTitles && !tiles.isEmpty {
             let maxScreenWidth = widthMax
             let minWidth = min(maxScreenWidth, 320)
             let maxNeededWidth = tiles.reduce(minWidth) { currentMax, tile in
                 max(currentMax, tile.view.contentWidthForTitlesStyle)
             }
             let optimalWidth = min(maxNeededWidth, maxScreenWidth).rounded()
+            optimalTitlesWidth = optimalWidth
             for tile in tiles {
                 tile.view.updateWidthForDynamicTitles(optimalWidth)
             }
         }
 
-        let layout = TileGridLayout.compute(gridInput(tiles, height, widthMax))
+        let gridWidthMax = isTitles ? ((optimalTitlesWidth ?? widthMax) + Appearance.interCellPadding * 2) : widthMax
+        let layout = TileGridLayout.compute(gridInput(tiles, height, gridWidthMax))
         for (position, tile) in tiles.enumerated() {
             tile.view.frame.origin = layout.origins[position]
         }
@@ -643,7 +647,7 @@ class TilesView {
         }
         let newViews = tiles.map { $0.view }
         let rowSignature = tiles.map { $0.index }
-        let maxX = layout.maxX
+        let maxX = isTitles ? (optimalTitlesWidth ?? layout.maxX) : layout.maxX
         let maxY = layout.maxY
         scrollView.documentView!.subviews = newViews
         scrollView.documentView!.addSubview(thumbnailOverView)

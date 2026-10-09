@@ -70,6 +70,10 @@ private func triggerMatchingShortcuts(_ globalId: Int?, _ shortcutState: Shortcu
     var someShortcutTriggered = false
     for shortcut in ControlsTab.shortcuts.values {
         if shortcut.matches(globalId, shortcutState, keyCode, modifiers) && shortcut.shouldTrigger() {
+            if isARepeat && shortcut.id == "previousWindowShortcut" {
+                // KeyRepeatTimer drives repeat for previousWindowShortcut; ignore OS auto-repeats
+                continue
+            }
             shortcut.executeAction(isARepeat)
             // we want to pass-through alt-up to the active app, since it saw alt-down previously
             if !shortcut.id.starts(with: "holdShortcut") {
