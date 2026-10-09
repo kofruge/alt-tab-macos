@@ -46,6 +46,7 @@ class Preferences {
             "screenRecordingPermissionSkipped": "false",
             "trackpadHapticFeedbackEnabled": "true",
             "twoFingerScrollAccelerationEnabled": "true",
+            "hideScrollbar": "false",
             "settingsWindowShownOnFirstLaunch": "false",
         ]
         (0..<maxShortcutCount).forEach { index in
@@ -116,6 +117,11 @@ class Preferences {
     static var twoFingerScrollStepThreshold: CGFloat {
         let custom = UserDefaults.standard.double(forKey: "twoFingerScrollStepThreshold")
         return custom > 0 ? CGFloat(custom) : 20.0
+    }
+    static var hideScrollbar: Bool {
+        if let val = UserDefaults.standard.object(forKey: "hideScrollbar") as? Bool { return val }
+        if let val = UserDefaults.standard.object(forKey: "showScrollbar") as? Bool { return !val }
+        return false
     }
     static var hideColoredCircles: Bool { CachedUserDefaults.bool("hideColoredCircles") }
     static var windowDisplayDelayInMs: Int { CachedUserDefaults.int("windowDisplayDelay") }

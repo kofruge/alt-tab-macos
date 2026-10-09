@@ -123,7 +123,7 @@ class TilesPanel: NSPanel {
         }
         ContextMenuEvents.toggle(true)
         CursorEvents.toggle(true)
-        DispatchQueue.main.async { TilesView.scrollView.flashScrollers() }
+        DispatchQueue.main.async { TilesView.flashScrollersIfNeeded() }
         SearchDiscoveryHint.shared.switcherShown()
     }
 

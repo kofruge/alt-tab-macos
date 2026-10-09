@@ -499,6 +499,7 @@ class TilesView {
         scrollAccumulator = 0
         scrollAccelerationEnabled = Preferences.twoFingerScrollAccelerationEnabled
         scrollStepThreshold = Preferences.twoFingerScrollStepThreshold
+        scrollView?.hasVerticalScroller = !Preferences.hideScrollbar
     }
 
     static func scroll(with event: NSEvent) {
@@ -526,6 +527,11 @@ class TilesView {
         let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : event.deltaY
         guard delta != 0 else { return }
         cycleSelectionFromScroll(delta > 0 ? .down : .up)
+        flashScrollersIfNeeded()
+    }
+
+    static func flashScrollersIfNeeded() {
+        guard !Preferences.hideScrollbar else { return }
         scrollView?.flashScrollers()
     }
 
@@ -564,7 +570,7 @@ class TilesView {
     }
 
     private static func stepSelectionWhileThresholdReached() {
-        guard let scrollView else { return }
+        guard scrollView != nil else { return }
         if !scrollAccelerationEnabled {
             guard abs(scrollAccumulator) >= scrollStepThreshold else { return }
             let direction: Direction = scrollAccumulator > 0 ? .down : .up
@@ -572,18 +578,18 @@ class TilesView {
                 ? min(scrollAccumulator - scrollStepThreshold, scrollStepThreshold - 1)
                 : max(scrollAccumulator + scrollStepThreshold, -(scrollStepThreshold - 1))
             cycleSelectionFromScroll(direction)
-            scrollView.flashScrollers()
+            flashScrollersIfNeeded()
             return
         }
         while scrollAccumulator >= scrollStepThreshold {
             scrollAccumulator -= scrollStepThreshold
             cycleSelectionFromScroll(.down)
-            scrollView.flashScrollers()
+            flashScrollersIfNeeded()
         }
         while scrollAccumulator <= -scrollStepThreshold {
             scrollAccumulator += scrollStepThreshold
             cycleSelectionFromScroll(.up)
-            scrollView.flashScrollers()
+            flashScrollersIfNeeded()
         }
     }
 
@@ -851,7 +857,7 @@ class ScrollView: NSScrollView {
         documentView = TilesDocumentView(frame: .zero)
         documentView!.wantsLayer = true
         drawsBackground = false
-        hasVerticalScroller = true
+        hasVerticalScroller = !Preferences.hideScrollbar
         verticalScrollElasticity = .none
         scrollerStyle = .overlay
         scrollerKnobStyle = .light

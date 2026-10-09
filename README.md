@@ -47,3 +47,19 @@ By default, AltTab matches macOS's system key repeat settings (`KeyRepeat` and `
   ```bash
   defaults write com.lwouis.alt-tab-macos twoFingerScrollStepThreshold -float 20.0
   ```
+
+### Scrollbar Visibility
+
+By default, the vertical scrollbar is visible during scrolling. If you prefer to completely disable or hide the scrollbar so it never appears or overlaps the list:
+
+- **Hide Scrollbar** (`hideScrollbar`):
+  ```bash
+  defaults write com.lwouis.alt-tab-macos hideScrollbar -bool true
+  ```
+
+- **Show Scrollbar** (restore default):
+  ```bash
+  defaults write com.lwouis.alt-tab-macos hideScrollbar -bool false
+  # or
+  defaults delete com.lwouis.alt-tab-macos hideScrollbar
+  ```
