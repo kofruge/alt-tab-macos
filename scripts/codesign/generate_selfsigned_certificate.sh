@@ -27,7 +27,7 @@ openssl req -x509 -new -config $certificateFile.conf -nodes -key $certificateFil
 openssl_version=$(openssl version)
 # openssl v3.x requires to pass -legacy
 # see https://www.misterpki.com/openssl-pkcs12-legacy/
-if [[ $openssl_version == OpenSSL\ 3* ]]; then
+if openssl pkcs12 -help 2>&1 | grep -q -- "-legacy"; then
   flag="-legacy"
 else
   flag=""

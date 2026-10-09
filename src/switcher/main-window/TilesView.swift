@@ -492,50 +492,89 @@ class TilesView {
     }
 
     private static var scrollAccumulator: CGFloat = 0
-    private static let scrollStepThreshold: CGFloat = 20.0
+    private static var scrollStepThreshold: CGFloat = 20.0
+    private static var scrollAccelerationEnabled: Bool = true
 
     static func resetScrollAccumulator() {
         scrollAccumulator = 0
+        scrollAccelerationEnabled = Preferences.twoFingerScrollAccelerationEnabled
+        scrollStepThreshold = Preferences.twoFingerScrollStepThreshold
     }
 
     static func scroll(with event: NSEvent) {
         guard let scrollView, scrollView.documentView != nil else { return }
-
-        // Discrete mouse wheel (traditional physical mouse wheel)
         if !event.hasPreciseScrollingDeltas {
-            let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : event.deltaY
-            guard delta != 0 else { return }
-            let direction: Direction = delta > 0 ? .down : .up
+            handleDiscreteScroll(event)
+            return
+        }
+        if !scrollAccelerationEnabled && event.momentumPhase != [] {
+            scrollAccumulator = 0
+            return
+        }
+        if event.phase == .began {
+            scrollAccumulator = 0
+        }
+        let delta = extractTrackpadDelta(event)
+        guard delta != 0 else { return }
+        applyTrackpadScroll(delta)
+        if event.phase == .ended || event.phase == .cancelled || event.momentumPhase == .ended || event.momentumPhase == .cancelled {
+            scrollAccumulator = 0
+        }
+    }
+
+    private static func handleDiscreteScroll(_ event: NSEvent) {
+        let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : event.deltaY
+        guard delta != 0 else { return }
+        cycleSelectionFromScroll(delta > 0 ? .down : .up)
+        scrollView?.flashScrollers()
+    }
+
+    private static func extractTrackpadDelta(_ event: NSEvent) -> CGFloat {
+        var delta = event.scrollingDeltaY
+        if delta == 0, let cgDelta = event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis1), cgDelta != 0 {
+            delta = CGFloat(cgDelta)
+        }
+        if delta == 0 {
+            delta = event.scrollingDeltaX
+            if delta == 0, let cgDelta = event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis2), cgDelta != 0 {
+                delta = CGFloat(cgDelta)
+            }
+        }
+        guard !scrollAccelerationEnabled, delta != 0 else { return delta }
+        return unacceleratedDelta(event, baseDelta: delta)
+    }
+
+    private static func unacceleratedDelta(_ event: NSEvent, baseDelta: CGFloat) -> CGFloat {
+        let isVertical = event.scrollingDeltaY != 0 || (event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis1) ?? 0) != 0
+        let field: CGEventField = isVertical ? .scrollWheelEventRawDeltaAxis1 : .scrollWheelEventRawDeltaAxis2
+        let raw = event.cgEvent?.getDoubleValueField(field) ?? 0
+        let sign: CGFloat = baseDelta >= 0 ? 1 : -1
+        if raw != 0 {
+            return CGFloat(abs(raw)) * sign
+        }
+        return min(max(baseDelta, -scrollStepThreshold), scrollStepThreshold)
+    }
+
+    private static func applyTrackpadScroll(_ delta: CGFloat) {
+        if (scrollAccumulator < 0 && delta > 0) || (scrollAccumulator > 0 && delta < 0) {
+            scrollAccumulator = 0
+        }
+        scrollAccumulator += delta
+        stepSelectionWhileThresholdReached()
+    }
+
+    private static func stepSelectionWhileThresholdReached() {
+        guard let scrollView else { return }
+        if !scrollAccelerationEnabled {
+            guard abs(scrollAccumulator) >= scrollStepThreshold else { return }
+            let direction: Direction = scrollAccumulator > 0 ? .down : .up
+            scrollAccumulator = scrollAccumulator > 0
+                ? min(scrollAccumulator - scrollStepThreshold, scrollStepThreshold - 1)
+                : max(scrollAccumulator + scrollStepThreshold, -(scrollStepThreshold - 1))
             cycleSelectionFromScroll(direction)
             scrollView.flashScrollers()
             return
         }
-
-        // Trackpad continuous gestures
-        if event.phase == .began {
-            scrollAccumulator = 0
-        }
-
-        var deltaY = event.scrollingDeltaY
-        if deltaY == 0, let cgDeltaY = event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis1), cgDeltaY != 0 {
-            deltaY = CGFloat(cgDeltaY)
-        }
-        if deltaY == 0 {
-            deltaY = event.scrollingDeltaX
-            if deltaY == 0, let cgDeltaX = event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis2), cgDeltaX != 0 {
-                deltaY = CGFloat(cgDeltaX)
-            }
-        }
-
-        guard deltaY != 0 else { return }
-
-        // If user reverses scroll direction, reset accumulator so direction change is immediately responsive
-        if (scrollAccumulator < 0 && deltaY > 0) || (scrollAccumulator > 0 && deltaY < 0) {
-            scrollAccumulator = 0
-        }
-
-        scrollAccumulator += deltaY
-
         while scrollAccumulator >= scrollStepThreshold {
             scrollAccumulator -= scrollStepThreshold
             cycleSelectionFromScroll(.down)
@@ -545,10 +584,6 @@ class TilesView {
             scrollAccumulator += scrollStepThreshold
             cycleSelectionFromScroll(.up)
             scrollView.flashScrollers()
-        }
-
-        if event.phase == .ended || event.phase == .cancelled || event.momentumPhase == .ended || event.momentumPhase == .cancelled {
-            scrollAccumulator = 0
         }
     }
 

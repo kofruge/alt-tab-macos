@@ -45,6 +45,7 @@ class Preferences {
             "captureWindowsInBackground": "true",
             "screenRecordingPermissionSkipped": "false",
             "trackpadHapticFeedbackEnabled": "true",
+            "twoFingerScrollAccelerationEnabled": "true",
             "settingsWindowShownOnFirstLaunch": "false",
         ]
         (0..<maxShortcutCount).forEach { index in
@@ -106,6 +107,16 @@ class Preferences {
     static var mouseHoverEnabled: Bool { CachedUserDefaults.bool("mouseHoverEnabled") }
     static var cursorFollowFocus: CursorFollowFocus { CachedUserDefaults.macroPref("cursorFollowFocus", CursorFollowFocus.allCases) }
     static var trackpadHapticFeedbackEnabled: Bool { CachedUserDefaults.bool("trackpadHapticFeedbackEnabled") }
+    static var twoFingerScrollAccelerationEnabled: Bool {
+        if let val = UserDefaults.standard.object(forKey: "twoFingerScrollAccelerationDisabled") as? Bool, val { return false }
+        if let val = UserDefaults.standard.object(forKey: "twoFingerScrollAccelerationEnabled") as? Bool { return val }
+        if let val = UserDefaults.standard.object(forKey: "twoFingerScrollAcceleration") as? Bool { return val }
+        return true
+    }
+    static var twoFingerScrollStepThreshold: CGFloat {
+        let custom = UserDefaults.standard.double(forKey: "twoFingerScrollStepThreshold")
+        return custom > 0 ? CGFloat(custom) : 20.0
+    }
     static var hideColoredCircles: Bool { CachedUserDefaults.bool("hideColoredCircles") }
     static var windowDisplayDelayInMs: Int { CachedUserDefaults.int("windowDisplayDelay") }
     static var windowDisplayDelay: DispatchTimeInterval { DispatchTimeInterval.milliseconds(windowDisplayDelayInMs) }
