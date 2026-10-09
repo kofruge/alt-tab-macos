@@ -472,9 +472,7 @@ class TilesView {
                 lastRowSignature = rowSignature
             }
             highlightStartView()
-            if let preservedScrollOrigin {
-                restoreScrollOrigin(preservedScrollOrigin)
-            }
+            restoreScrollOrigin(preservedScrollOrigin ?? .zero)
         }
     }
 
