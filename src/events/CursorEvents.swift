@@ -19,9 +19,11 @@ class CursorEvents {
         shouldBeEnabled = enabled
         if !enabled {
             deadZoneInitialPosition = nil
+            TilesView.resetScrollAccumulator()
         } else {
             sawLeftMouseDown = false // fresh session: a drag in flight when we show has no down we saw
             searchHintClick = SearchDiscoveryPolicy.Click()
+            TilesView.resetScrollAccumulator()
         }
         if let eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: enabled)
@@ -35,7 +37,7 @@ class CursorEvents {
     }
 
     static func observe() {
-        let eventMask = [CGEventType.leftMouseDown, CGEventType.leftMouseUp, CGEventType.rightMouseDown, CGEventType.rightMouseUp, CGEventType.otherMouseDown, CGEventType.otherMouseUp, CGEventType.mouseMoved].reduce(CGEventMask(0), { $0 | (1 << $1.rawValue) })
+        let eventMask = [CGEventType.leftMouseDown, CGEventType.leftMouseUp, CGEventType.rightMouseDown, CGEventType.rightMouseUp, CGEventType.otherMouseDown, CGEventType.otherMouseUp, CGEventType.mouseMoved, CGEventType.scrollWheel].reduce(CGEventMask(0), { $0 | (1 << $1.rawValue) })
         eventTap = CGEvent.createTapOrRestart(
             tap: .cgSessionEventTap,
             options: .defaultTap,
@@ -57,6 +59,7 @@ class CursorEvents {
             case .otherMouseDown: return handleOtherMouseDown(cgEvent)
             case .otherMouseUp: return handleOtherMouseUp(cgEvent)
             case .mouseMoved: return handleMouseMoved(cgEvent)
+            case .scrollWheel: return handleScrollWheel(cgEvent)
             case .tapDisabledByUserInput, .tapDisabledByTimeout:
                 if shouldBeEnabled { CGEvent.tapEnable(tap: eventTap!, enable: true) }
                 return Unmanaged.passUnretained(cgEvent)
@@ -152,6 +155,16 @@ class CursorEvents {
             TilesView.thumbnailOverView.updateHover()
         }
         return Unmanaged.passUnretained(cgEvent)
+    }
+
+    private static func handleScrollWheel(_ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
+        if ContextMenuEvents.isMenuOpen { return Unmanaged.passUnretained(cgEvent) }
+        guard SwitcherSession.isActive,
+              let event = NSEvent(cgEvent: cgEvent) else {
+            return Unmanaged.passUnretained(cgEvent)
+        }
+        TilesView.scroll(with: event)
+        return nil
     }
 
     static func resetDeadzone() {

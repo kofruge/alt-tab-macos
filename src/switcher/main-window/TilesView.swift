@@ -493,6 +493,81 @@ class TilesView {
         scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
+    private static var scrollAccumulator: CGFloat = 0
+    private static let scrollStepThreshold: CGFloat = 20.0
+
+    static func resetScrollAccumulator() {
+        scrollAccumulator = 0
+    }
+
+    static func scroll(with event: NSEvent) {
+        guard let scrollView, scrollView.documentView != nil else { return }
+
+        // Discrete mouse wheel (traditional physical mouse wheel)
+        if !event.hasPreciseScrollingDeltas {
+            let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : event.deltaY
+            guard delta != 0 else { return }
+            let direction: Direction = delta > 0 ? .down : .up
+            cycleSelectionFromScroll(direction)
+            scrollView.flashScrollers()
+            return
+        }
+
+        // Trackpad continuous gestures
+        if event.phase == .began {
+            scrollAccumulator = 0
+        }
+
+        var deltaY = event.scrollingDeltaY
+        if deltaY == 0, let cgDeltaY = event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis1), cgDeltaY != 0 {
+            deltaY = CGFloat(cgDeltaY)
+        }
+        if deltaY == 0 {
+            deltaY = event.scrollingDeltaX
+            if deltaY == 0, let cgDeltaX = event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis2), cgDeltaX != 0 {
+                deltaY = CGFloat(cgDeltaX)
+            }
+        }
+
+        guard deltaY != 0 else { return }
+
+        // If user reverses scroll direction, reset accumulator so direction change is immediately responsive
+        if (scrollAccumulator < 0 && deltaY > 0) || (scrollAccumulator > 0 && deltaY < 0) {
+            scrollAccumulator = 0
+        }
+
+        scrollAccumulator += deltaY
+
+        while scrollAccumulator >= scrollStepThreshold {
+            scrollAccumulator -= scrollStepThreshold
+            cycleSelectionFromScroll(.down)
+            scrollView.flashScrollers()
+        }
+        while scrollAccumulator <= -scrollStepThreshold {
+            scrollAccumulator += scrollStepThreshold
+            cycleSelectionFromScroll(.up)
+            scrollView.flashScrollers()
+        }
+
+        if event.phase == .ended || event.phase == .cancelled || event.momentumPhase == .ended || event.momentumPhase == .cancelled {
+            scrollAccumulator = 0
+        }
+    }
+
+    static func cycleSelectionFromScroll(_ direction: Direction) {
+        (scrollView?.documentView as? TilesDocumentView)?.cancelDraggingTimer()
+        CursorEvents.resetDeadzone()
+        if rows.count > 1 {
+            navigateUpOrDown(direction, allowWrap: false)
+        } else {
+            let step = direction == .down ? 1 : -1
+            Windows.cycleSelectedWindowIndex(step, allowWrap: false)
+        }
+        if Preferences.trackpadHapticFeedbackEnabled {
+            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+        }
+    }
+
     private static func resolveAutoSize(_ widthMax: CGFloat) {
         let searchReservedHeight: CGFloat = searchMode == .off ? 0 : searchBarHeight() + 10
         let heightMax = max(0, TilesPanel.maxThumbnailsHeight() - searchReservedHeight)
@@ -547,6 +622,19 @@ class TilesView {
         let filled = fillTiles(height)
         guard !filled.aborted else { return nil }
         let tiles = filled.tiles
+
+        if Preferences.effectiveAppearanceStyle(SwitcherSession.activeShortcutIndex) == .titles && !tiles.isEmpty {
+            let maxScreenWidth = widthMax
+            let minWidth = min(maxScreenWidth, 320)
+            let maxNeededWidth = tiles.reduce(minWidth) { currentMax, tile in
+                max(currentMax, tile.view.contentWidthForTitlesStyle)
+            }
+            let optimalWidth = min(maxNeededWidth, maxScreenWidth).rounded()
+            for tile in tiles {
+                tile.view.updateWidthForDynamicTitles(optimalWidth)
+            }
+        }
+
         let layout = TileGridLayout.compute(gridInput(tiles, height, widthMax))
         for (position, tile) in tiles.enumerated() {
             tile.view.frame.origin = layout.origins[position]

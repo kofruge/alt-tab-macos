@@ -556,6 +556,34 @@ class TileView: FlippedView {
         }
     }
 
+    var contentWidthForTitlesStyle: CGFloat {
+        Appearance.edgeInsetsSize * 2
+            + appIcon.frame.width
+            + Appearance.appIconLabelSpacing
+            + fullTitleWidth
+            + statusIcons.totalWidth
+            + 8
+    }
+
+    func updateWidthForDynamicTitles(_ newWidth: CGFloat) {
+        assignIfDifferent(&frame.size.width, newWidth)
+        let edgeInsets = Appearance.edgeInsetsSize
+        let hWidth = frame.width - edgeInsets * 2
+        let labelWidth = max(0, hWidth - appIcon.frame.width - Appearance.appIconLabelSpacing - statusIcons.totalWidth)
+        label.setWidth(labelWidth)
+        let hHeight = max(appIcon.frame.height, TilesView.layoutCache.labelHeight)
+        statusIcons.layoutIcons(hWidth: hWidth, hHeight: hHeight, edgeInsets: edgeInsets)
+        let labelX: CGFloat
+        if App.shared.userInterfaceLayoutDirection == .leftToRight {
+            labelX = appIcon.frame.maxX + Appearance.appIconLabelSpacing
+        } else {
+            labelX = edgeInsets + hWidth - appIcon.frame.width - Appearance.appIconLabelSpacing - labelWidth
+        }
+        assignIfDifferent(&label.frame.origin.x, labelX)
+        assignIfDifferent(&label.frame.origin.y, edgeInsets + ((hHeight - TilesView.layoutCache.labelHeight) / 2).rounded())
+        applySearchHighlight()
+    }
+
     private func updatePositions() {
         let edgeInsets = Appearance.edgeInsetsSize
         assignIfDifferent(&appIcon.frame.origin, NSPoint(x: edgeInsets, y: edgeInsets))
