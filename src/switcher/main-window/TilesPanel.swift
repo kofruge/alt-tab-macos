@@ -132,17 +132,17 @@ class TilesPanel: NSPanel {
            let readableWidth = TilesView.layoutCache.comfortableReadabilityWidth {
             return (
                 min(
-                    screen.frame.width * Appearance.maxWidthOnScreen,
+                    screen.visibleFrame.width * Appearance.maxWidthOnScreen,
                     readableWidth + Appearance.intraCellPadding * 2 + Appearance.appIconLabelSpacing + Appearance.iconSize
                     // widthOfLongestTitle + Appearance.intraCellPadding * 2 + Appearance.appIconLabelSpacing + Appearance.iconSize
                 ) - Appearance.windowPadding * 2
             ).rounded()
         }
-        return (screen.frame.width * Appearance.maxWidthOnScreen - Appearance.windowPadding * 2).rounded()
+        return (screen.visibleFrame.width * Appearance.maxWidthOnScreen - Appearance.windowPadding * 2).rounded()
     }
 
     static func maxThumbnailsHeight(_ screen: NSScreen = NSScreen.preferred) -> CGFloat {
-        return (screen.frame.height * Appearance.maxHeightOnScreen - Appearance.windowPadding * 2).rounded()
+        return (screen.visibleFrame.height * Appearance.maxHeightOnScreen - Appearance.windowPadding * 2).rounded()
     }
 
     static func updateMaxPossibleThumbnailSize() {
