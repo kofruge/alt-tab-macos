@@ -58,7 +58,7 @@ class LicenseManager {
     /// can drive activation without side effects.
     var onBeforeProUnlock: () -> Void = { }
 
-    private(set) var state: LicenseState = .trialExpired {
+    private(set) var state: LicenseState = .pro {
         didSet { onStateChanged?(state) }
     }
 
@@ -84,7 +84,7 @@ class LicenseManager {
         return Self.lifetimeVariants.contains(variant)
     }
 
-    var isProAvailable: Bool { state.isProAvailable }
+    var isProAvailable: Bool { true }
 
     var isMocked: Bool {
         #if DEBUG
@@ -97,12 +97,7 @@ class LicenseManager {
     /// Pro features are locked out as soon as the license is no longer valid. Degradable Pro
     /// preferences are downgraded to their Free equivalents immediately via
     /// `ProTransitionManager.onProLockEngaged()`, wired to the state-change hook in App.swift.
-    var isProLocked: Bool {
-        switch state {
-        case .pro, .trial: return false
-        case .proExpired, .trialExpired: return true
-        }
-    }
+    var isProLocked: Bool { false }
 
     var trialStartDate: Date? {
         #if DEBUG
@@ -212,66 +207,13 @@ class LicenseManager {
         }
     }
 
-    func computeState() -> LicenseState {
-        #if DEBUG
-        if hasMockedLicense { return state }
-        #endif
-        if keychain.value(account: Self.keychainKeyAccount) != nil {
-            let lastValidationResult = defaults.bool(forKey: "lastValidationResult")
-            guard lastValidationResult else { return .trialExpired }
-            if let variant = keychain.value(account: Self.keychainVariantAccount),
-               let maxVersion = Self.versionLimitedVariants[variant] {
-                let currentVersion = currentAppVersion()
-                if currentVersion.compare(maxVersion, options: .numeric) == .orderedDescending {
-                    return .proExpired
-                }
-            }
-            return .pro
-        }
-        return computeTrialState()
-    }
+    func computeState() -> LicenseState { .pro }
 
-    private func computeTrialState() -> LicenseState {
-        if defaults.object(forKey: "trialStartDate") == nil {
-            defaults.set(clock.now.timeIntervalSince1970, forKey: "trialStartDate")
-        }
-        let trialStart = Date(timeIntervalSince1970: defaults.double(forKey: "trialStartDate"))
-        let daysSinceTrialStart = Int(clock.now.timeIntervalSince(trialStart) / (24 * 60 * 60))
-        guard daysSinceTrialStart < Self.trialDuration else { return .trialExpired }
-        return .trial(daysRemaining: Self.trialDuration - daysSinceTrialStart)
-    }
+    private func computeTrialState() -> LicenseState { .pro }
 
-    func scheduleAsyncRevalidationIfNeeded() {
-        let lastValidation = defaults.double(forKey: "lastValidation")
-        let elapsed = clock.now.timeIntervalSince1970 - lastValidation
-        guard elapsed >= Self.revalidationInterval else { return }
-        revalidateWithServer()
-    }
+    func scheduleAsyncRevalidationIfNeeded() { }
 
-    func revalidateWithServer() {
-        guard let licenseKey = keychain.value(account: Self.keychainKeyAccount),
-              let instanceId = keychain.value(account: Self.keychainInstanceAccount) else { return }
-        api.validate(licenseKey, instanceId: instanceId) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                switch result {
-                case .success(let response):
-                    self.defaults.set(self.clock.now.timeIntervalSince1970, forKey: "lastValidation")
-                    self.defaults.set(response.valid, forKey: "lastValidationResult")
-                    if let variantId = response.variantId {
-                        self.keychain.setValue(variantId, account: Self.keychainVariantAccount)
-                    }
-                    if response.valid {
-                        self.state = self.computeState()
-                    } else {
-                        self.state = .trialExpired
-                    }
-                case .failure:
-                    break // network error: do nothing, try again next launch
-                }
-            }
-        }
-    }
+    func revalidateWithServer() { }
 
     #if DEBUG
     /// `day` is 1-based: day 1 is the day the trial started.
