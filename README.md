@@ -63,3 +63,28 @@ By default, the vertical scrollbar is visible during scrolling. If you prefer to
   # or
   defaults delete com.lwouis.alt-tab-macos hideScrollbar
   ```
+
+---
+
+## Building Releases with GitHub Actions CI
+
+A dedicated GitHub Actions workflow is provided at `.github/workflows/release.yml` to compile and package universal binaries on macOS CI runners without requiring developer secrets.
+
+### Option 1: Manual Trigger via GitHub Web UI
+
+1. Go to your fork's repository on GitHub.
+2. Click on the **Actions** tab.
+3. Select **Build Release** in the sidebar.
+4. Click **Run workflow**:
+   - Optionally enter a version tag (e.g. `v7.0.0-mini.1`).
+   - Toggle whether to create a formal GitHub Release or just save the `.zip` as a workflow artifact.
+5. Once completed (~3-4 minutes), the release `.zip` and `.sha256` checksum will be attached to the run artifacts and published as a GitHub Release.
+
+### Option 2: Automatic Trigger on Git Tag
+
+Pushing any version tag starting with `v` automatically triggers a release build and publishes it:
+
+```bash
+git tag v11.9.0-mini.1
+git push origin v11.9.0-mini.1
+```

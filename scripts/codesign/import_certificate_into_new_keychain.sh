@@ -12,6 +12,10 @@ keychainPassword="password"
 security create-keychain -p $keychainPassword $keychain
 # make keychain default so xcodebuild uses it
 security default-keychain -s $keychain
+# What: Appends the newly created keychain to the active user keychain search list.
+# Why: `codesign` and `security find-identity` only query keychains listed in the search list;
+# setting default alone is insufficient on headless CI runners.
+security list-keychains -d user -s $keychain $(security list-keychains -d user 2>/dev/null | tr -d '"' || true)
 # unlock keychain
 security unlock-keychain -p $keychainPassword $keychain
 # import p12 into Keychain

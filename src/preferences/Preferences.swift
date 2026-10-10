@@ -108,16 +108,37 @@ class Preferences {
     static var mouseHoverEnabled: Bool { CachedUserDefaults.bool("mouseHoverEnabled") }
     static var cursorFollowFocus: CursorFollowFocus { CachedUserDefaults.macroPref("cursorFollowFocus", CursorFollowFocus.allCases) }
     static var trackpadHapticFeedbackEnabled: Bool { CachedUserDefaults.bool("trackpadHapticFeedbackEnabled") }
+    /// Controls whether macOS velocity-based acceleration curves are applied to two-finger trackpad scrolling.
+    ///
+    /// - What: Reads user defaults key `twoFingerScrollAccelerationEnabled` (or legacy aliases `twoFingerScrollAcceleration`
+    ///   and `twoFingerScrollAccelerationDisabled`). Defaults to `true` to maintain stock macOS acceleration behavior.
+    /// - Why: macOS trackpad scroll events include non-linear acceleration curves and momentum inertia phases. When cycling
+    ///   through a discrete list of windows, acceleration can cause rapid, unpredictable jumps across items. Disabling this
+    ///   allows selection stepping to map 1:1 linearly with raw physical finger movement across the trackpad surface.
     static var twoFingerScrollAccelerationEnabled: Bool {
         if let val = UserDefaults.standard.object(forKey: "twoFingerScrollAccelerationDisabled") as? Bool, val { return false }
         if let val = UserDefaults.standard.object(forKey: "twoFingerScrollAccelerationEnabled") as? Bool { return val }
         if let val = UserDefaults.standard.object(forKey: "twoFingerScrollAcceleration") as? Bool { return val }
         return true
     }
+
+    /// The accumulated trackpad scroll distance (in screen points) required to step selection to an adjacent window.
+    ///
+    /// - What: Reads `twoFingerScrollStepThreshold` from user defaults. Defaults to `20.0` points if unset or non-positive.
+    /// - Why: Provides adjustable sensitivity calibration for two-finger gestures. Higher values require more physical
+    ///   finger movement per window selection step, preventing accidental overshooting, while lower values increase responsiveness.
     static var twoFingerScrollStepThreshold: CGFloat {
         let custom = UserDefaults.standard.double(forKey: "twoFingerScrollStepThreshold")
         return custom > 0 ? CGFloat(custom) : 20.0
     }
+
+    /// Controls whether the vertical overlay scrollbar in the switcher window list is hidden.
+    ///
+    /// - What: Reads `hideScrollbar` (or inverse `showScrollbar`) from user defaults. Defaults to `false`.
+    /// - Why: macOS AppKit overlay scrollers draw directly on top of the document view along the rightmost boundary. In compact
+    ///   or titles-style layouts, the transient scroller overlays window titles, close buttons, and status icons. Furthermore,
+    ///   because click events inside the switcher panel activate or close windows rather than dragging scroll controls, the
+    ///   scrollbar cannot be dragged interactively; hiding it prevents visual clutter and content overlap.
     static var hideScrollbar: Bool {
         if let val = UserDefaults.standard.object(forKey: "hideScrollbar") as? Bool { return val }
         if let val = UserDefaults.standard.object(forKey: "showScrollbar") as? Bool { return !val }

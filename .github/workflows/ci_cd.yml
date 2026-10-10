@@ -20,6 +20,9 @@ env:
 jobs:
   build:
     runs-on: macos-15 # all options: https://github.com/actions/runner-images/tree/main
+    # What: Restrict upstream CD workflow to the official repository.
+    # Why: Fork repositories do not possess the upstream production Apple Developer ID and AppCenter secrets.
+    if: github.repository == 'lwouis/alt-tab-macos'
     environment: production
     steps:
 #      - env:

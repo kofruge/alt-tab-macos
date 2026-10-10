@@ -25,8 +25,10 @@ openssl genrsa -out $certificateFile.key 2048
 openssl req -x509 -new -config $certificateFile.conf -nodes -key $certificateFile.key -extensions extensions -sha256 -out $certificateFile.crt
 
 openssl_version=$(openssl version)
-# openssl v3.x requires to pass -legacy
-# see https://www.misterpki.com/openssl-pkcs12-legacy/
+# What: Detects whether the active OpenSSL CLI supports the `-legacy` flag for PKCS#12 export.
+# Why: OpenSSL 3.x and 4.x+ moved RC2-40 and other legacy PKCS#12 algorithms to a legacy provider.
+# Without `-legacy`, PKCS#12 export can fail or generate bundles unreadable by macOS `security import`.
+# Checking `-help` dynamically rather than matching `3*` prevents breakage when running on OpenSSL 4.x+.
 if openssl pkcs12 -help 2>&1 | grep -q -- "-legacy"; then
   flag="-legacy"
 else

@@ -1,5 +1,25 @@
 #!/usr/bin/env bash
 
+# ==============================================================================
+# AltTab Build Automation Script
+#
+# WHAT:
+#   Automates building, code-signing, optional installation, and execution of
+#   AltTab for both Debug and Release configurations.
+#
+# WHY:
+#   1. Headless Developer Workflow: Enables fast building and testing from the
+#      terminal without opening the Xcode IDE interface.
+#   2. Accessibility Permission Persistence: macOS TCC (Transparency, Consent,
+#      and Control) ties granted Accessibility privileges to the binary's code
+#      signature. Using an ad-hoc ("-") signature causes macOS to invalidate
+#      permissions after every rebuild. This script ensures all builds are signed
+#      with the stable "Local Self-Signed" certificate identity so permissions
+#      persist seamlessly across incremental development builds.
+#   3. Clean Deployment: Automates terminating running instances, copying the
+#      built bundle into /Applications, and launching via the LaunchServices API.
+# ==============================================================================
+
 set -euo pipefail
 
 # Default configuration is release

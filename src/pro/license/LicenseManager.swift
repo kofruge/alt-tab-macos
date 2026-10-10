@@ -58,6 +58,11 @@ class LicenseManager {
     /// can drive activation without side effects.
     var onBeforeProUnlock: () -> Void = { }
 
+    /// Current licensing status.
+    ///
+    /// - What: Hardcoded to `.pro` on this fork.
+    /// - Why: Unlocks all Pro features locally (extra shortcuts, appearance customization) in private/local builds
+    ///   without requiring an active commercial license or network validation with the license server.
     private(set) var state: LicenseState = .pro {
         didSet { onStateChanged?(state) }
     }
@@ -207,12 +212,28 @@ class LicenseManager {
         }
     }
 
+    /// Resolves the current license state.
+    ///
+    /// - What: Returns `.pro`.
+    /// - Why: Bypasses keychain checks and trial time limits to keep Pro unlocked indefinitely.
     func computeState() -> LicenseState { .pro }
 
+    /// Resolves trial time-remaining state.
+    ///
+    /// - What: Returns `.pro`.
+    /// - Why: Replaces time-limited trial calculation with perpetual Pro status.
     private func computeTrialState() -> LicenseState { .pro }
 
+    /// Revalidation scheduler stub.
+    ///
+    /// - What: No-op.
+    /// - Why: Disables recurring background server validation checks.
     func scheduleAsyncRevalidationIfNeeded() { }
 
+    /// Remote server validation stub.
+    ///
+    /// - What: No-op.
+    /// - Why: Eliminates outgoing network telemetry and license validation HTTP calls.
     func revalidateWithServer() { }
 
     #if DEBUG

@@ -480,6 +480,13 @@ class TilesView {
         return scrollView.contentView.bounds.origin
     }
 
+    /// Restores scroll position safely within document view bounds.
+    ///
+    /// - What: Clamps `scrollOrigin` against the maximum permissible scroll offset (`maxX`, `maxY`)
+    ///   derived from document size versus visible clip bounds, then scrolls `contentView` to the clamped position.
+    /// - Why: Prevents out-of-bounds origins or visual bounce glitches when the list of visible windows shrinks
+    ///   between invocations, ensuring consistent and non-distorted layout restoration.
+    /// - Parameter scrollOrigin: Target origin point to scroll to.
     private static func restoreScrollOrigin(_ scrollOrigin: CGPoint) {
         guard let documentView = scrollView.documentView else { return }
         let visibleSize = scrollView.contentView.bounds.size
@@ -491,10 +498,19 @@ class TilesView {
         scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
+    /// Accumulator tracking physical trackpad displacement across continuous scroll events.
     private static var scrollAccumulator: CGFloat = 0
+    /// Distance in points of trackpad gesture movement required to advance one selection step.
     private static var scrollStepThreshold: CGFloat = 20.0
+    /// Cached setting indicating whether macOS velocity acceleration curves should apply to trackpad scrolling.
     private static var scrollAccelerationEnabled: Bool = true
 
+    /// Resets scroll tracking state and synchronizes runtime scrollbar visibility with current preferences.
+    ///
+    /// - What: Zeros `scrollAccumulator`, reads the latest acceleration and sensitivity settings from `Preferences`,
+    ///   and synchronizes `hasVerticalScroller` on `scrollView`.
+    /// - Why: Called when a switcher session activates or dismisses to prevent residual delta from prior gestures
+    ///   from triggering unintended window selection changes, and to immediately reflect any user defaults updates.
     static func resetScrollAccumulator() {
         scrollAccumulator = 0
         scrollAccelerationEnabled = Preferences.twoFingerScrollAccelerationEnabled
@@ -502,6 +518,13 @@ class TilesView {
         scrollView?.hasVerticalScroller = !Preferences.hideScrollbar
     }
 
+    /// Primary entry point for routing scroll wheel and trackpad gesture events to window list navigation.
+    ///
+    /// - What: Distinguishes between discrete mouse wheel clicks and continuous trackpad gestures, routing
+    ///   events to the appropriate stepping pipeline.
+    /// - Why: Allows users to cycle through windows using physical mouse wheels or two-finger trackpad swipes
+    ///   instead of only keyboard shortcuts.
+    /// - Parameter event: The `NSEvent` representing the scroll gesture.
     static func scroll(with event: NSEvent) {
         guard let scrollView, scrollView.documentView != nil else { return }
         if !event.hasPreciseScrollingDeltas {
@@ -523,6 +546,11 @@ class TilesView {
         }
     }
 
+    /// Handles discrete scroll wheel events (e.g. traditional stepped physical mouse wheels).
+    ///
+    /// - What: Reads vertical delta from `scrollingDeltaY` or fallback `deltaY`, and cycles selection one step.
+    /// - Why: Physical mouse wheels generate discrete notched events rather than continuous streams; each notch
+    ///   directly triggers a single selection advance.
     private static func handleDiscreteScroll(_ event: NSEvent) {
         let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : event.deltaY
         guard delta != 0 else { return }
@@ -530,11 +558,21 @@ class TilesView {
         flashScrollersIfNeeded()
     }
 
+    /// Triggers a brief scroller fade-in flash on the scroll view, unless scrollbars are disabled.
+    ///
+    /// - What: Invokes `scrollView?.flashScrollers()` only when `Preferences.hideScrollbar` is `false`.
+    /// - Why: Avoids unnecessary AppKit layout work and animation overhead when the user has opted to hide scrollbars.
     static func flashScrollersIfNeeded() {
         guard !Preferences.hideScrollbar else { return }
         scrollView?.flashScrollers()
     }
 
+    /// Extracts normalized directional delta from a trackpad continuous scroll event.
+    ///
+    /// - What: Inspects vertical and horizontal scroll deltas across both AppKit `NSEvent` and low-level `CGEvent`
+    ///   fields. When acceleration is disabled, routes through `unacceleratedDelta` to extract raw uncurved values.
+    /// - Why: Hardware-specific trackpads may report zero on one axis or require inspection of raw `CGEvent` fields
+    ///   for accurate sub-pixel measurement.
     private static func extractTrackpadDelta(_ event: NSEvent) -> CGFloat {
         var delta = event.scrollingDeltaY
         if delta == 0, let cgDelta = event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis1), cgDelta != 0 {
@@ -550,6 +588,11 @@ class TilesView {
         return unacceleratedDelta(event, baseDelta: delta)
     }
 
+    /// Extracts raw hardware deltas bypassing macOS non-linear velocity acceleration curves.
+    ///
+    /// - What: Reads `kCGScrollWheelEventRawDeltaAxis1` or `Axis2` from the low-level `CGEvent`.
+    /// - Why: macOS applies exponential acceleration curves to rapid trackpad swipes. To achieve predictable, linear
+    ///   window selection without skipping over items, this extracts the raw physical device displacement.
     private static func unacceleratedDelta(_ event: NSEvent, baseDelta: CGFloat) -> CGFloat {
         let isVertical = event.scrollingDeltaY != 0 || (event.cgEvent?.getDoubleValueField(.scrollWheelEventDeltaAxis1) ?? 0) != 0
         let field: CGEventField = isVertical ? .scrollWheelEventRawDeltaAxis1 : .scrollWheelEventRawDeltaAxis2
@@ -561,6 +604,10 @@ class TilesView {
         return min(max(baseDelta, -scrollStepThreshold), scrollStepThreshold)
     }
 
+    /// Updates accumulated trackpad gesture travel and triggers stepping checks.
+    ///
+    /// - What: Adds delta to `scrollAccumulator`. If the gesture reverses direction, immediately zeroes the accumulator.
+    /// - Why: Zeroing on direction flip ensures instant responsiveness without having to counteract opposing residual momentum.
     private static func applyTrackpadScroll(_ delta: CGFloat) {
         if (scrollAccumulator < 0 && delta > 0) || (scrollAccumulator > 0 && delta < 0) {
             scrollAccumulator = 0
@@ -569,6 +616,10 @@ class TilesView {
         stepSelectionWhileThresholdReached()
     }
 
+    /// Advances window selection as long as accumulated gesture travel exceeds `scrollStepThreshold`.
+    ///
+    /// - What: Repeatedly subtracts `scrollStepThreshold` from `scrollAccumulator` and advances selection in the active direction.
+    /// - Why: Transforms continuous finger movement into discrete, quantized selection steps matching list items.
     private static func stepSelectionWhileThresholdReached() {
         guard scrollView != nil else { return }
         if !scrollAccelerationEnabled {
@@ -593,6 +644,11 @@ class TilesView {
         }
     }
 
+    /// Steps active window selection from scroll input and delivers tactile haptic feedback.
+    ///
+    /// - What: Cancels tile dragging timers, resets cursor deadzones, advances selection via `navigateUpOrDown` or
+    ///   `Windows.cycleSelectedWindowIndex`, and triggers an optional NSHapticFeedbackManager pulse.
+    /// - Why: Centralizes the execution of scroll-driven selection changes and pairs them with physical tactile feedback.
     static func cycleSelectionFromScroll(_ direction: Direction) {
         (scrollView?.documentView as? TilesDocumentView)?.cancelDraggingTimer()
         CursorEvents.resetDeadzone()
@@ -665,6 +721,10 @@ class TilesView {
         let isTitles = Preferences.effectiveAppearanceStyle(SwitcherSession.activeShortcutIndex) == .titles
         var optimalTitlesWidth: CGFloat? = nil
         if isTitles && !tiles.isEmpty {
+            // Compute optimal width for mini-mode / titles style:
+            // What: Measures each tile's natural text + icon width and sizes the panel to fit the widest tile.
+            // Why: Prevents empty, overly wide gutters when all titles are brief, while expanding gracefully
+            // up to available screen bounds when long window titles are present.
             let maxScreenWidth = widthMax
             let minWidth = min(maxScreenWidth, 320)
             let maxNeededWidth = tiles.reduce(minWidth) { currentMax, tile in
@@ -677,6 +737,7 @@ class TilesView {
             }
         }
 
+        // For titles style, pass optimalTitlesWidth as grid boundary to prevent grid layout from overflowing
         let gridWidthMax = isTitles ? ((optimalTitlesWidth ?? widthMax) + Appearance.interCellPadding * 2) : widthMax
         let layout = TileGridLayout.compute(gridInput(tiles, height, gridWidthMax))
         for (position, tile) in tiles.enumerated() {
@@ -857,6 +918,8 @@ class ScrollView: NSScrollView {
         documentView = TilesDocumentView(frame: .zero)
         documentView!.wantsLayer = true
         drawsBackground = false
+        // What: Conditionally allocates the vertical NSScroller based on user preference.
+        // Why: When false, AppKit will not render or flash an overlay knob over tiles during scrolling.
         hasVerticalScroller = !Preferences.hideScrollbar
         verticalScrollElasticity = .none
         scrollerStyle = .overlay

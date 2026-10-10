@@ -17,9 +17,13 @@ class Appearance {
     static var windowMaxWidthInRow = CGFloat(1000)
 
     // size: constants
+    /// What: Maximum proportion of visible screen height the switcher panel is allowed to occupy (96%).
+    /// Why: Permits high-density single-column lists (mini-mode) to maximize visible item count without clipping the menu bar or dock.
     static let maxHeightOnScreen = CGFloat(0.96)
     static let interCellPadding = CGFloat(1)
     static let intraCellPadding = CGFloat(5)
+    /// What: Spacing between the application icon and the title label (4 pt).
+    /// Why: Provides tailored legibility and proportional spacing in compact titles-style list rows.
     static let appIconLabelSpacing = CGFloat(4)
 
     // theme
@@ -157,6 +161,12 @@ class Appearance {
         }
     }
 
+    /// Configures compact dimensions, corner radii, and typographic metrics for the `.titles` style (mini-mode).
+    ///
+    /// - What: Applies compact cell padding (8 pt window padding, 4 pt cell corners, 3 pt insets) and dense icon/font
+    ///   pairings (16-20 pt icons with 12-13.5 pt typography) across size presets.
+    /// - Why: Transforms the default wide thumbnail switcher into a streamlined, high-density vertical list view
+    ///   optimized for rapid window scanning and keyboard/scroll wheel navigation.
     private static func titlesSize(_ size: AppearanceSizePreference) {
         hideThumbnails = true
         windowPadding = 8

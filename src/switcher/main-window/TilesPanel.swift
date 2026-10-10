@@ -127,10 +127,20 @@ class TilesPanel: NSPanel {
         SearchDiscoveryHint.shared.switcherShown()
     }
 
+    /// Computes maximum allowable switcher width constrained to the screen's usable area.
+    ///
+    /// - What: Evaluates available width based on `screen.visibleFrame.width` rather than total `screen.frame.width`.
+    /// - Why: Bounds panel dimensions strictly within usable screen real estate, preventing collisions with the
+    ///   macOS Dock (when docked left/right) and display edges.
     static func maxThumbnailsWidth(_ screen: NSScreen = NSScreen.preferred) -> CGFloat {
         return (screen.visibleFrame.width * Appearance.maxWidthOnScreen - Appearance.windowPadding * 2).rounded()
     }
 
+    /// Computes maximum allowable switcher height constrained to the screen's usable area.
+    ///
+    /// - What: Evaluates available height based on `screen.visibleFrame.height` rather than total `screen.frame.height`.
+    /// - Why: Prevents the switcher panel from obscuring or being covered by the macOS Menu Bar, display notch,
+    ///   or bottom Dock.
     static func maxThumbnailsHeight(_ screen: NSScreen = NSScreen.preferred) -> CGFloat {
         return (screen.visibleFrame.height * Appearance.maxHeightOnScreen - Appearance.windowPadding * 2).rounded()
     }

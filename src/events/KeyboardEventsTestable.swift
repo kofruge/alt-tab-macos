@@ -71,7 +71,10 @@ private func triggerMatchingShortcuts(_ globalId: Int?, _ shortcutState: Shortcu
     for shortcut in ControlsTab.shortcuts.values {
         if shortcut.matches(globalId, shortcutState, keyCode, modifiers) && shortcut.shouldTrigger() {
             if isARepeat && shortcut.id == "previousWindowShortcut" {
-                // KeyRepeatTimer drives repeat for previousWindowShortcut; ignore OS auto-repeats
+                // What: Ignores native OS auto-repeat keyDown events for previousWindowShortcut.
+                // Why: KeyRepeatTimer drives dedicated repeating ticks for previous window cycling; allowing
+                // native OS keyboard repeat events to execute simultaneously would cause race conditions
+                // and erratic double-stepping backwards.
                 continue
             }
             shortcut.executeAction(isARepeat)

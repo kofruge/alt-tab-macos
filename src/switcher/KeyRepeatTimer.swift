@@ -14,6 +14,11 @@ class KeyRepeatTimer {
     static var currentInitialDelay: TimeInterval = 0
     static var currentRepeatRate: TimeInterval = 0
 
+    /// Arms the artificial repeat timer for cycling to previous windows.
+    ///
+    /// - What: Binds `previousWindowShortcut` to the repeat timer loop driving `App.previousWindowShortcutWithRepeatingKey()`.
+    /// - Why: Allows holding the shortcut (e.g. Shift+Tab) to repeat backwards continuously at the configured
+    ///   repeat interval, keeping timing consistent and preventing double-stepping from OS repeat events.
     static func startRepeatingKeyPreviousWindow() {
         if let shortcut = ControlsTab.shortcuts["previousWindowShortcut"] {
             startTimerForRepeatingKey(shortcut) {
@@ -52,6 +57,8 @@ class KeyRepeatTimer {
         // return nil on its first read, so every launch's first hold-cycle ran at these instead.
         // Read per arm, but served from the cache after the first time, so a change made in System Settings
         // mid-session isn't picked up until relaunch.
+        // What: Resolves repeat interval prioritizing local user default override `keyRepeatInterval`.
+        // Why: Enables user-calibrated repeat rates specific to AltTab cycling without modifying system-wide settings.
         let repeatRate: TimeInterval = {
             let custom = UserDefaults.standard.double(forKey: "keyRepeatInterval")
             if custom > 0 {
@@ -62,6 +69,8 @@ class KeyRepeatTimer {
             }
             return 0.065
         }()
+        // What: Resolves initial hold delay prioritizing local user default override `keyRepeatInitialDelay`.
+        // Why: Enables fine-tuning before auto-repeat kicks in when holding down navigation keys.
         let initialDelay: TimeInterval = {
             let custom = UserDefaults.standard.double(forKey: "keyRepeatInitialDelay")
             if custom > 0 {

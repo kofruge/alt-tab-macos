@@ -334,6 +334,9 @@ class TileView: FlippedView {
             setAccessibilityLabel(title)
         }
         fullTitle = title
+        // What: Measures title width using both the NSTextFieldCell and direct CoreText NSString sizing.
+        // Why: NSTextFieldCell.cellSize can lag or report truncated bounds when layout caches or font styles change;
+        // taking the maximum with direct NSString measurement ensures reliable bounds across dynamic titles sizing.
         let cellWidth = label.cell!.cellSize.width
         let stringWidth = (title as NSString).size(withAttributes: [.font: Appearance.font]).width.rounded(.up)
         fullTitleWidth = max(cellWidth, stringWidth)
@@ -558,6 +561,13 @@ class TileView: FlippedView {
         }
     }
 
+    /// Computes the ideal total horizontal width required to display this tile unclipped in `.titles` style.
+    ///
+    /// - What: Sums edge insets, app icon frame width, icon-to-label spacing, measured window title width,
+    ///   status badge icons width, and safety margins.
+    /// - Why: Used by `TilesView` dynamic layout calculations to determine the exact width required for the
+    ///   switcher panel to fit all window titles without artificial truncation or unnecessary excess space.
+    /// - Returns: Total horizontal width in points.
     var contentWidthForTitlesStyle: CGFloat {
         let measuredTitleWidth = fullTitleWidth > 0 ? fullTitleWidth : (fullTitle as NSString).size(withAttributes: [.font: Appearance.font]).width.rounded(.up)
         return Appearance.edgeInsetsSize * 2
@@ -568,6 +578,13 @@ class TileView: FlippedView {
             + 8
     }
 
+    /// Dynamically applies a synchronized width across all tiles in `.titles` mode.
+    ///
+    /// - What: Assigns the new frame width, re-layouts title label boundaries, repositions status icons,
+    ///   re-centers the label vertically, and updates search highlights.
+    /// - Why: Ensures uniform width across all rows in single-column or compact multi-row titles mode while
+    ///   retaining proper RTL layout support and vertical alignment.
+    /// - Parameter newWidth: Target width in points to assign to the tile.
     func updateWidthForDynamicTitles(_ newWidth: CGFloat) {
         assignIfDifferent(&frame.size.width, newWidth)
         let edgeInsets = Appearance.edgeInsetsSize

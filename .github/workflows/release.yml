@@ -1,0 +1,142 @@
+# ==============================================================================
+# GitHub Actions Release Workflow for AltTab (Fork / Mini-Mode)
+#
+# WHAT:
+#   Automates the compilation, code-signing, packaging, and publishing of
+#   AltTab universal binary releases on GitHub-hosted macOS CI runners.
+#
+# WHY:
+#   1. Zero-Secret Cloud Builds: Builds universal Release binaries and signs
+#      them with a self-contained local self-signed certificate in a temporary
+#      keychain, enabling automated releases without requiring paid Apple
+#      Developer ID certificates or private secrets.
+#   2. Flexible Triggering: Supports both automatic releases on tag push (`v*`)
+#      and manual triggers via the GitHub Actions UI (`workflow_dispatch`).
+#   3. Dual Distribution: Always attaches the `.zip` archive and SHA256 checksum
+#      to GitHub Actions artifacts for instant download, and publishes a formal
+#      GitHub Release when triggered via tags or when requested.
+# ==============================================================================
+
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag name (e.g. v7.0.0-mini.1). Leave empty to use run number.'
+        required: false
+        default: ''
+      create_release:
+        description: 'Publish a GitHub Release (attaching .zip asset)'
+        type: boolean
+        default: true
+      prerelease:
+        description: 'Mark this release as a pre-release'
+        type: boolean
+        default: false
+      draft:
+        description: 'Create this release as a draft'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Package AltTab
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            TAG="${{ github.event.inputs.tag_name }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v11.9.0-mini.${{ github.run_number }}"
+          fi
+          # Strip leading 'v' for internal version string
+          RAW_VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$RAW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version $RAW_VERSION (tag: $TAG)"
+
+      - name: Prepare configuration
+        run: |
+          mkdir -p config
+          echo "CURRENT_PROJECT_VERSION = ${{ steps.version.outputs.version }}" > config/local.xcconfig
+          echo "APPCENTER_SECRET = " >> config/local.xcconfig
+
+      - name: Setup Self-Signed Keychain
+        run: |
+          ./scripts/codesign/setup_ci_pr.sh
+
+      - name: Build Universal Release Binary
+        run: |
+          ./build.sh release
+
+      - name: Package Release Archive
+        id: package
+        run: |
+          APP_PATH="DerivedData/Build/Products/Release/AltTab.app"
+          ZIP_NAME="AltTab-${{ steps.version.outputs.tag }}.zip"
+          
+          # Use ditto to preserve macOS metadata, symlinks, and code signature
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_NAME"
+          shasum -a 256 "$ZIP_NAME" > "${ZIP_NAME}.sha256"
+          
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "zip_path=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "sha_path=${ZIP_NAME}.sha256" >> "$GITHUB_OUTPUT"
+          
+          ls -lh "$ZIP_NAME" "${ZIP_NAME}.sha256"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.zip_name }}
+          path: |
+            ${{ steps.package.outputs.zip_path }}
+            ${{ steps.package.outputs.sha_path }}
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release != 'false') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: AltTab Mini ${{ steps.version.outputs.tag }}
+          draft: ${{ github.event.inputs.draft == 'true' || false }}
+          prerelease: ${{ github.event.inputs.prerelease == 'true' || false }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.package.outputs.zip_path }}
+            ${{ steps.package.outputs.sha_path }}
+          body: |
+            ### AltTab Mini (${{ steps.version.outputs.tag }})
+
+            Universal macOS build (Apple Silicon & Intel) with compact Mini-Mode features.
+
+            #### First-Time Launch Instructions
+            Because this build is signed with a local self-signed certificate, macOS Gatekeeper may block it upon first launch.
+            
+            1. Move **AltTab.app** to your `/Applications` folder.
+            2. Run the following command in Terminal to clear Gatekeeper quarantine:
+               ```bash
+               xattr -cr /Applications/AltTab.app
+               ```
+            3. Grant Accessibility and Screen Recording permissions when prompted in **System Settings > Privacy & Security**.

@@ -157,6 +157,14 @@ class CursorEvents {
         return Unmanaged.passUnretained(cgEvent)
     }
 
+    /// Intercepts low-level scroll wheel events to navigate the switcher window list.
+    ///
+    /// - What: Checks if a switcher session is active and context menus are closed, converts `cgEvent` to `NSEvent`,
+    ///   routes to `TilesView.scroll(with:)`, and returns `nil` to consume the event.
+    /// - Why: Consuming the event prevents background applications underneath the floating panel from scrolling
+    ///   their documents while the user is scrolling through AltTab windows.
+    /// - Parameter cgEvent: The raw CoreGraphics scroll event from the session event tap.
+    /// - Returns: `nil` when consumed, or an unretained reference to `cgEvent` to pass through.
     private static func handleScrollWheel(_ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
         if ContextMenuEvents.isMenuOpen { return Unmanaged.passUnretained(cgEvent) }
         guard SwitcherSession.isActive,
