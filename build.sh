@@ -70,10 +70,27 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Verify Local Self-Signed certificate exists
+# What: Checks whether the "Local Self-Signed" identity exists in any accessible keychain.
+# Why: `security find-identity -v` requires certificates to pass system trust policy evaluation
+# (i.e. signed by Apple Root CA or present in system root trust store). Self-signed certificates
+# generated in CI environments are not in the system trust root, causing `-v` to report 0 valid
+# identities even when the certificate and private key are fully present and usable for codesigning.
+# Omitting `-v` ensures both local and CI environments detect the certificate correctly.
 SIGNING_IDENTITY="Local Self-Signed"
-if ! security find-identity -v -p codesigning | grep -q "\"$SIGNING_IDENTITY\""; then
-  echo "==> Setting up local self-signed certificate..."
-  ./scripts/codesign/setup_local.sh
+if ! security find-identity -p codesigning | grep -q "\"$SIGNING_IDENTITY\""; then
+  if [ -n "${CI:-}" ]; then
+    echo "==> Setting up CI self-signed certificate..."
+    ./scripts/codesign/setup_ci_pr.sh
+  else
+    echo "==> Setting up local self-signed certificate..."
+    ./scripts/codesign/setup_local.sh
+  fi
+fi
+
+# What: Ensure CI temporary keychain is unlocked prior to build and signing steps.
+# Why: In headless CI runners, keychains can re-lock across separate shell invocations.
+if [ -n "${CI:-}" ] || security list-keychains 2>/dev/null | grep -q "alt-tab-macos.keychain"; then
+  security unlock-keychain -p password alt-tab-macos.keychain 2>/dev/null || true
 fi
 
 if [ "$CONFIG" = "debug" ]; then

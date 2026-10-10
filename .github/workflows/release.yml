@@ -53,6 +53,7 @@ jobs:
   build:
     name: Build & Package AltTab
     runs-on: macos-14
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
