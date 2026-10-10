@@ -52,9 +52,16 @@ concurrency:
 jobs:
   build:
     name: Build & Package AltTab
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 20
     steps:
+      - name: Select Xcode
+        run: |
+          if [ -d "/Applications/Xcode_26.0.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer
+          fi
+          xcodebuild -version
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
