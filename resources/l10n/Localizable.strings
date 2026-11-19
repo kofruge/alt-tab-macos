@@ -1,3 +1,6 @@
+/* Duplicate launch notification title; %@ is AltTab */
+"%@ is already running" = "%@ is already running";
+
 /* No comment provided by engineer. */
 "%@ now has a Pro tier" = "%@ now has a Pro tier";
 
@@ -84,6 +87,9 @@
 
 /* No comment provided by engineer. */
 "Alphabetical Order" = "Alphabetical Order";
+
+/* Duplicate launch notification body; %@ is the running app path */
+"Already running from %@" = "Already running from %@";
 
 /* No comment provided by engineer. */
 "AltTab crashed last time you used it. Sending a crash report will help get the issue fixed" = "AltTab crashed last time you used it. Sending a crash report will help get the issue fixed";

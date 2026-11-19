@@ -64,10 +64,11 @@ class App: AppCenterApplication {
         // we use -n to open a new instance, to avoid calling applicationShouldHandleReopen
         // we use Bundle.main.bundlePath in case of multiple AltTab versions on the machine
         printStackTrace()
-        var arguments = ["-n", Bundle.main.bundlePath]
+        var launchArgs = [SingleInstancePolicy.restartArgument(for: ProcessInfo.processInfo.processIdentifier)]
         #if DEBUG
-        if QaLifecycle.enabled { arguments += ["--args"] + QaLifecycle.restartArguments }
+        if QaLifecycle.enabled { launchArgs += QaLifecycle.restartArguments }
         #endif
+        let arguments = ["-n", Bundle.main.bundlePath, "--args"] + launchArgs
         Process.launchedProcess(launchPath: "/usr/bin/open", arguments: arguments)
         App.shared.terminate(nil)
     }
@@ -182,6 +183,26 @@ class App: AppCenterApplication {
         }
     }
 
+    static func showSettingsWindowOrPermissions() {
+        guard Menubar.statusItem == nil else {
+            showSettingsWindow()
+            return
+        }
+        pendingShowSettingsWindow = true
+        if let window = PermissionsWindow.shared {
+            App.shared.activate(ignoringOtherApps: true)
+            if window.isMiniaturized { window.deminiaturize(nil) }
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    static func handleDuplicateLaunch(_ outcome: SingleInstancePolicy.DuplicateLaunchOutcome) {
+        showSettingsWindowOrPermissions()
+        if case .activateDifferentLocation(let runningPath) = outcome {
+            SingleInstanceGuard.postAlreadyRunningNotification(runningPath: runningPath)
+        }
+    }
+
     @objc static func showAboutWindow() {
         initializeAboutWindowIfNeeded()
         showSecondaryWindow(AboutWindow.shared!)
@@ -190,6 +211,7 @@ class App: AppCenterApplication {
     static func showSecondaryWindow(_ window: NSWindow) {
         NSScreen.updatePreferred()
         App.shared.activate(ignoringOtherApps: true)
+        if window.isMiniaturized { window.deminiaturize(nil) }
         window.makeKeyAndOrderFront(nil)
         // if the window was resized/repositioned by the user, restore the window the way it was.
         // ObjCExceptionCatcher guards a corrupt persisted frame (non-finite / out of Int32 bounds):
@@ -580,6 +602,7 @@ class App: AppCenterApplication {
             pendingShowSettingsWindow = false
             showSettingsWindow()
         }
+        SingleInstanceGuard.requestNotificationAuthorizationIfNeeded()
         #if DEBUG
         if !QAMenu.suppressed {
             QAMenu.shared = QAMenu()
@@ -604,6 +627,7 @@ extension App: NSApplicationDelegate {
         App.appCenterDelegate = AppCenterCrash()
         App.shared.disableRelaunchOnLogin()
         Logger.initialize()
+        SingleInstanceGuard.installNotificationDelegate()
         MainThreadStall.observe()
         Logger.info { "Launching AltTab \(App.version)" }
         // Create the background queues first, before anything that can pump the main run loop re-entrantly
@@ -702,7 +726,7 @@ extension App: NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        App.showSettingsWindow()
+        App.showSettingsWindowOrPermissions()
         return true
     }
 

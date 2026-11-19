@@ -21,8 +21,9 @@ EOL
 
 # generate key
 openssl genrsa -out $certificateFile.key 2048
-# generate self-signed certificate
-openssl req -x509 -new -config $certificateFile.conf -nodes -key $certificateFile.key -extensions extensions -sha256 -out $certificateFile.crt
+# What: Generate a 10-year (`-days 3650`) self-signed code-signing certificate.
+# Why: `openssl req -x509` defaults to 30 days, causing local certificates to expire and break TCC permission persistence across rebuilds.
+openssl req -x509 -new -days 3650 -config $certificateFile.conf -nodes -key $certificateFile.key -extensions extensions -sha256 -out $certificateFile.crt
 
 openssl_version=$(openssl version)
 # What: Detects whether the active OpenSSL CLI supports the `-legacy` flag for PKCS#12 export.

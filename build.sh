@@ -69,19 +69,28 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Verify Local Self-Signed certificate exists
-# What: Checks whether the "Local Self-Signed" identity exists in any accessible keychain.
-# Why: `security find-identity -v` requires certificates to pass system trust policy evaluation
-# (i.e. signed by Apple Root CA or present in system root trust store). Self-signed certificates
-# generated in CI environments are not in the system trust root, causing `-v` to report 0 valid
-# identities even when the certificate and private key are fully present and usable for codesigning.
-# Omitting `-v` ensures both local and CI environments detect the certificate correctly.
 SIGNING_IDENTITY="Local Self-Signed"
-if ! security find-identity -p codesigning | grep -q "\"$SIGNING_IDENTITY\""; then
-  if [ -n "${CI:-}" ]; then
+if [ -n "${CI:-}" ]; then
+  # What: In CI, check for a non-expired certificate in the temporary keychain without `-v`.
+  # Why: CI self-signed certs live in a temporary keychain outside the system trust root, so `-v`
+  # reports 0 valid identities even when codesigning works.
+  all_identities="$(security find-identity -p codesigning 2>/dev/null || true)"
+  if ! printf '%s\n' "$all_identities" | grep "\"$SIGNING_IDENTITY\"" | grep -vq "CSSMERR_TP_CERT_EXPIRED"; then
     echo "==> Setting up CI self-signed certificate..."
     ./scripts/codesign/setup_ci_pr.sh
-  else
+  fi
+else
+  # What: Locally, require a valid, trusted, non-expired "Local Self-Signed" identity (`-v`).
+  # Why: Expired or untrusted certs cause `codesign` to fail or leave the app ad-hoc signed,
+  # breaking macOS TCC permission persistence across rebuilds.
+  valid_identities="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+  if ! printf '%s\n' "$valid_identities" | grep -q "\"$SIGNING_IDENTITY\""; then
+    all_identities="$(security find-identity -p codesigning 2>/dev/null || true)"
+    if printf '%s\n' "$all_identities" | grep -q "\"$SIGNING_IDENTITY\""; then
+      echo "Error: An expired or untrusted '$SIGNING_IDENTITY' certificate exists in your Keychain." >&2
+      echo "Please open Keychain Access, search for '$SIGNING_IDENTITY' in the 'login' keychain, delete the expired certificate, and re-run ./build.sh." >&2
+      exit 1
+    fi
     echo "==> Setting up local self-signed certificate..."
     ./scripts/codesign/setup_local.sh
   fi
@@ -124,15 +133,25 @@ fi
 echo ""
 echo "==> Build successful: $APP_PATH"
 
+stop_running_alttab() {
+  pkill -x AltTab 2>/dev/null || true
+  for _ in $(seq 1 50); do
+    if ! pgrep -x AltTab >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.1
+  done
+}
+
 if [ "$INSTALL" = true ]; then
   echo "==> Installing to /Applications/AltTab.app..."
-  pkill -x AltTab 2>/dev/null || true
+  stop_running_alttab
   rm -rf /Applications/AltTab.app
   cp -R "$APP_PATH" /Applications/AltTab.app
   echo "==> Launching /Applications/AltTab.app..."
   open /Applications/AltTab.app
 elif [ "$LAUNCH" = true ]; then
   echo "==> Launching $APP_PATH..."
-  pkill -x AltTab 2>/dev/null || true
+  stop_running_alttab
   open "$APP_PATH"
 fi

@@ -42,7 +42,9 @@ enum QaLifecycle {
 
     static var restartArguments: [String] {
         let mode = permission(0) ? (permission(1) ? "granted" : "screen") : (permission(1) ? "accessibility" : "denied")
-        return CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("--qa-permissions=") } + ["--qa-permissions=\(mode)"]
+        return CommandLine.arguments.dropFirst()
+            .filter { !$0.hasPrefix("--qa-permissions=") && !$0.hasPrefix(SingleInstancePolicy.restartingPidFlagPrefix) }
+            + ["--qa-permissions=\(mode)"]
     }
     static var licenseService: String { "\(App.bundleIdentifier).qa.lifecycle.\(session!)" }
     static var licenseSuite: String { "\(App.bundleIdentifier).qa.lifecycle.\(session!)" }

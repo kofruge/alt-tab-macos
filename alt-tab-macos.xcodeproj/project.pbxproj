@@ -455,6 +455,10 @@
 		6A7E5D000000000000000101 /* StapledTicket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7E5D000000000000000100 /* StapledTicket.swift */; };
 		6A7E5D000000000000000102 /* StapledTicket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7E5D000000000000000100 /* StapledTicket.swift */; };
 		6A7E5D000000000000000202 /* StapledTicketTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7E5D000000000000000200 /* StapledTicketTests.swift */; };
+		AA2026111900000000000101 /* SingleInstancePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2026111900000000000100 /* SingleInstancePolicy.swift */; };
+		AA2026111900000000000102 /* SingleInstancePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2026111900000000000100 /* SingleInstancePolicy.swift */; };
+		AA2026111900000000000201 /* SingleInstanceGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2026111900000000000200 /* SingleInstanceGuard.swift */; };
+		AA2026111900000000000302 /* SingleInstancePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2026111900000000000300 /* SingleInstancePolicyTests.swift */; };
 		5CC019000000000000000101 /* CaptureDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CC019000000000000000100 /* CaptureDiscovery.swift */; };
 		5CC019000000000000000102 /* CaptureDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CC019000000000000000100 /* CaptureDiscovery.swift */; };
 		5CC019000000000000000202 /* CaptureDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CC019000000000000000200 /* CaptureDiscoveryTests.swift */; };
@@ -933,6 +937,9 @@
 		5CC018000000000000000200 /* CoalescedWorkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoalescedWorkTests.swift; sourceTree = "<group>"; };
 		6A7E5D000000000000000100 /* StapledTicket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StapledTicket.swift; sourceTree = "<group>"; };
 		6A7E5D000000000000000200 /* StapledTicketTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StapledTicketTests.swift; sourceTree = "<group>"; };
+		AA2026111900000000000100 /* SingleInstancePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstancePolicy.swift; sourceTree = "<group>"; };
+		AA2026111900000000000200 /* SingleInstanceGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstanceGuard.swift; sourceTree = "<group>"; };
+		AA2026111900000000000300 /* SingleInstancePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstancePolicyTests.swift; sourceTree = "<group>"; };
 		5CC019000000000000000100 /* CaptureDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDiscovery.swift; sourceTree = "<group>"; };
 		5CC019000000000000000200 /* CaptureDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDiscoveryTests.swift; sourceTree = "<group>"; };
 		9D658C9879802E65C83FB7C4 /* SearchDiscoveryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchDiscoveryPolicy.swift; sourceTree = "<group>"; };
@@ -1021,6 +1028,9 @@
 				5CC018000000000000000100 /* CoalescedWork.swift */,
 				6A7E5D000000000000000100 /* StapledTicket.swift */,
 				6A7E5D000000000000000200 /* StapledTicketTests.swift */,
+				AA2026111900000000000100 /* SingleInstancePolicy.swift */,
+				AA2026111900000000000200 /* SingleInstanceGuard.swift */,
+				AA2026111900000000000300 /* SingleInstancePolicyTests.swift */,
 				5EA8E110000000000000F201 /* SchedulingPolicy.swift */,
 				5EA8E110000000000000F211 /* SchedulingPolicyTests.swift */,
 				AA0C8B000000000000000002 /* UsageStats.swift */,
@@ -2222,6 +2232,8 @@
 				5CC018000000000000000202 /* CoalescedWorkTests.swift in Sources */,
 				6A7E5D000000000000000102 /* StapledTicket.swift in Sources */,
 				6A7E5D000000000000000202 /* StapledTicketTests.swift in Sources */,
+				AA2026111900000000000102 /* SingleInstancePolicy.swift in Sources */,
+				AA2026111900000000000302 /* SingleInstancePolicyTests.swift in Sources */,
 				5CC019000000000000000102 /* CaptureDiscovery.swift in Sources */,
 				5CC019000000000000000202 /* CaptureDiscoveryTests.swift in Sources */,
 				5EA8E110000000000000F203 /* SchedulingPolicy.swift in Sources */,
@@ -2559,6 +2571,8 @@
 				BF0C8A2F6E4C85A7D9B63B12 /* Throttler.swift in Sources */,
 				5CC018000000000000000101 /* CoalescedWork.swift in Sources */,
 				6A7E5D000000000000000101 /* StapledTicket.swift in Sources */,
+				AA2026111900000000000101 /* SingleInstancePolicy.swift in Sources */,
+				AA2026111900000000000201 /* SingleInstanceGuard.swift in Sources */,
 				5CC019000000000000000101 /* CaptureDiscovery.swift in Sources */,
 				5EA8E110000000000000F202 /* SchedulingPolicy.swift in Sources */,
 				AA0C8A100000000000000001 /* AXCallScheduler.swift in Sources */,
